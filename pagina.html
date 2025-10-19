@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorador Interactivo de Microprocesadores</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Dark Slate and Blue -->
+    <!-- Application Structure Plan: The SPA is designed with a top-down thematic structure, guiding the user from general concepts to specifics. It starts with fundamentals (architectures), moves to an interactive anatomical diagram of the CPU, provides a deep dive into registers using a tabbed interface for clarity, visualizes the instruction cycle process, and concludes with performance comparisons (CISC/RISC, Pipelining). A sticky navigation bar allows both linear progression and quick access to any section. This structure was chosen to build knowledge progressively and make complex topics digestible through targeted interactions, rather than mirroring the original document's linear format. -->
+    <!-- Visualization & Content Choices: 1. CPU Anatomy -> Goal: Organize/Inform -> Interactive Diagram (HTML/JS) -> Click to reveal info, making learning self-paced. 2. Registers -> Goal: Organize -> Tabbed Interface (HTML/JS) -> Breaks down dense data into clear, manageable sections. 3. Instruction Cycle -> Goal: Show Process -> Animated sequence (HTML/CSS/JS) -> Visualizes a time-based flow effectively. 4. Pipelining -> Goal: Compare/Show Change -> Bar Chart (Chart.js/Canvas) -> Quantitatively demonstrates performance gains over non-pipelined execution. All choices adhere to the NO SVG/Mermaid rule and support the user-centric thematic structure. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* slate-900 */
+            color: #e2e8f0; /* slate-200 */
+        }
+        .tab-active {
+            border-color: #60a5fa; /* blue-400 */
+            background-color: #1e293b; /* slate-800 */
+            color: #60a5fa; /* blue-400 */
+        }
+        .nav-active {
+            color: #60a5fa; /* blue-400 */
+            font-weight: 600;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px;
+            max-height: 50vh;
+        }
+        .step-highlight {
+            transition: all 0.5s ease-in-out;
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(96, 165, 250, 0.5);
+            border-color: #60a5fa; /* blue-400 */
+        }
+        .component-active {
+            background-color: #1e293b; /* slate-800 */
+            border-color: #60a5fa; /* blue-400 */
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header id="header" class="bg-slate-900/80 backdrop-blur-lg sticky top-0 z-50 border-b border-slate-700">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-slate-200">🖥️ Arquitectura de CPU</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#fundamentos" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-400 hover:text-blue-400">Fundamentos</a>
+                        <a href="#anatomia" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-400 hover:text-blue-400">Anatomía</a>
+                        <a href="#registros" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-400 hover:text-blue-400">Registros</a>
+                        <a href="#ciclo" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-400 hover:text-blue-400">Ciclo de Instrucción</a>
+                        <a href="#rendimiento" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-slate-400 hover:text-blue-400">Rendimiento</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+
+        <section id="hero" class="text-center mb-16 md:mb-24">
+            <h2 class="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-100 mb-4">Explorador Interactivo de Microprocesadores</h2>
+            <p class="max-w-3xl mx-auto text-lg text-slate-400">
+                Una guía visual para entender el corazón de la computación. Descubre los componentes, arquitecturas y procesos que dan vida a la tecnología que usamos a diario.
+            </p>
+        </section>
+
+        <section id="fundamentos" class="mb-16 md:mb-24 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-slate-200">Arquitecturas Fundamentales</h3>
+                <p class="mt-2 text-md text-slate-400">Dos enfoques distintos sobre cómo un procesador accede a la memoria.</p>
+            </div>
+            <div class="grid md:grid-cols-2 gap-8 lg:gap-12">
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                    <h4 class="text-xl font-semibold mb-3 text-blue-400">Von Neumann</h4>
+                    <p class="text-slate-300 mb-4">Utiliza una **única memoria** para almacenar tanto las instrucciones del programa como los datos. Esto requiere un solo conjunto de buses, simplificando el diseño pero creando un posible "cuello de botella".</p>
+                    <div class="text-center p-4 bg-slate-700/50 rounded-lg">
+                        <p class="font-mono text-sm text-slate-300">CPU ↔ Bus Único ↔ Memoria (Instrucciones + Datos)</p>
+                    </div>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                    <h4 class="text-xl font-semibold mb-3 text-emerald-400">Harvard</h4>
+                    <p class="text-slate-300 mb-4">Emplea **dos memorias independientes** y dos conjuntos de buses separados: uno para instrucciones y otro para datos. Esto permite el acceso simultáneo, mejorando significativamente la velocidad y el rendimiento.</p>
+                    <div class="text-center p-4 bg-slate-700/50 rounded-lg">
+                         <p class="font-mono text-sm text-slate-300">CPU ↔ Bus de Datos ↔ Memoria de Datos</p>
+                         <p class="font-mono text-sm text-slate-300">CPU ↔ Bus de Instrucciones ↔ Memoria de Programa</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="anatomia" class="mb-16 md:mb-24 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-slate-200">Anatomía del Procesador</h3>
+                <p class="mt-2 text-md text-slate-400">Haz clic en cada componente para descubrir su función. Juntos, forman la unidad central de procesamiento (CPU).</p>
+            </div>
+            <div class="grid lg:grid-cols-3 gap-8 items-start">
+                <div class="lg:col-span-1 flex flex-col space-y-3">
+                    <button data-target="info-cu" class="component-btn text-left p-3 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 hover:border-blue-500 transition-all">
+                        <h5 class="font-semibold text-slate-200">Unidad de Control (CU)</h5>
+                        <p class="text-sm text-slate-400">El director de orquesta.</p>
+                    </button>
+                    <button data-target="info-alu" class="component-btn text-left p-3 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 hover:border-blue-500 transition-all">
+                        <h5 class="font-semibold text-slate-200">Unidad Aritmética y Lógica (ALU)</h5>
+                        <p class="text-sm text-slate-400">La calculadora del sistema.</p>
+                    </button>
+                    <button data-target="info-reg" class="component-btn text-left p-3 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 hover:border-blue-500 transition-all">
+                        <h5 class="font-semibold text-slate-200">Registros</h5>
+                        <p class="text-sm text-slate-400">La memoria ultrarrápida.</p>
+                    </button>
+                     <button data-target="info-bus" class="component-btn text-left p-3 bg-slate-800 border border-slate-700 rounded-lg hover:bg-slate-700 hover:border-blue-500 transition-all">
+                        <h5 class="font-semibold text-slate-200">Unidad de Interfaz de Bus (BIU)</h5>
+                        <p class="text-sm text-slate-400">El puente de comunicación.</p>
+                    </button>
+                </div>
+                <div class="lg:col-span-2 bg-slate-800 p-8 rounded-xl border border-slate-700 min-h-[280px]">
+                    <div id="component-info-display">
+                        <div id="info-cu" class="component-info hidden">
+                            <h4 class="text-2xl font-bold text-blue-400 mb-2">Unidad de Control (CU)</h4>
+                            <p class="text-slate-300">Es el centro neurálgico del procesador. Se encarga de leer, interpretar y ejecutar las instrucciones del programa una por una. Genera las señales de control y temporización necesarias para sincronizar y coordinar las operaciones de todos los demás componentes del sistema, como la ALU, los registros y la memoria.</p>
+                        </div>
+                        <div id="info-alu" class="component-info hidden">
+                            <h4 class="text-2xl font-bold text-blue-400 mb-2">Unidad Aritmética y Lógica (ALU)</h4>
+                            <p class="text-slate-300">Es la responsable de realizar todas las operaciones de cálculo. Esto incluye operaciones aritméticas básicas (suma, resta, multiplicación, división) y operaciones lógicas (AND, OR, NOT, XOR). Recibe datos de los registros, los procesa según la instrucción actual y almacena el resultado, generalmente en el registro acumulador.</p>
+                        </div>
+                        <div id="info-reg" class="component-info hidden">
+                            <h4 class="text-2xl font-bold text-blue-400 mb-2">Registros</h4>
+                            <p class="text-slate-300">Son pequeñas unidades de memoria de muy alta velocidad ubicadas dentro del propio procesador. Se utilizan para almacenar temporalmente los datos, las instrucciones y las direcciones con las que la CPU está trabajando en un momento dado. Su acceso es casi instantáneo, lo que los hace fundamentales para el rendimiento del sistema.</p>
+                        </div>
+                        <div id="info-bus" class="component-info hidden">
+                            <h4 class="text-2xl font-bold text-blue-400 mb-2">Unidad de Interfaz de Bus (BIU)</h4>
+                             <p class="text-slate-300">Actúa como el intermediario entre la CPU y el resto de los componentes del sistema (como la memoria RAM y los periféricos). Gestiona el bus de datos, el bus de direcciones y el bus de control para asegurar que la información se transfiera de manera correcta y eficiente hacia y desde el procesador.</p>
+                        </div>
+                         <div id="info-default" class="component-info text-center pt-10">
+                            <p class="text-slate-500">Selecciona un componente para ver su descripción.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="registros" class="mb-16 md:mb-24 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-slate-200">Los Registros: La Memoria Interna</h3>
+                <p class="mt-2 text-md text-slate-400">Explora las diferentes categorías de registros y sus funciones específicas dentro de la CPU.</p>
+            </div>
+            <div>
+                <div class="border-b border-slate-700 mb-6">
+                    <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                        <button class="tab-btn tab-active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm" data-tab="tab-trabajo">De Trabajo</button>
+                        <button class="tab-btn whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-slate-400 border-transparent hover:text-slate-200 hover:border-slate-600" data-tab="tab-control">De Control y Estado</button>
+                        <button class="tab-btn whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-slate-400 border-transparent hover:text-slate-200 hover:border-slate-600" data-tab="tab-interfaz">De Interfaz de Memoria</button>
+                    </nav>
+                </div>
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                    <div id="tab-trabajo" class="tab-content">
+                        <h4 class="text-lg font-semibold text-slate-200 mb-4">Registros de Trabajo (Visibles por el Usuario)</h4>
+                        <p class="text-slate-300 mb-4">Son accesibles por el programador para optimizar el código. Incluyen:</p>
+                        <ul class="list-disc list-inside space-y-2 text-slate-300">
+                            <li><strong>Acumulador (AX):</strong> Registro principal para operaciones aritméticas; almacena un operando y el resultado.</li>
+                            <li><strong>Registros de Datos (BX, CX, DX):</strong> Almacenamiento temporal de datos. El CX a menudo se usa como contador en bucles.</li>
+                            <li><strong>Puntero de Pila (SP):</strong> Apunta a la cima de la pila, usada para llamadas a funciones y variables locales.</li>
+                            <li><strong>Puntero Base (BP):</strong> Apunta a una dirección base en la pila para facilitar el acceso a variables.</li>
+                            <li><strong>Registros Índice (SI, DI):</strong> Usados para direccionamiento indexado, ideal para recorrer arrays o cadenas de texto.</li>
+                        </ul>
+                    </div>
+                    <div id="tab-control" class="tab-content hidden">
+                        <h4 class="text-lg font-semibold text-slate-200 mb-4">Registros de Control y Estado</h4>
+                        <p class="text-slate-300 mb-4">Gestionan el flujo del programa y el estado del procesador.</p>
+                         <ul class="list-disc list-inside space-y-2 text-slate-300">
+                            <li><strong>Contador de Programa (PC/IP):</strong> ¡Crucial! Contiene la dirección de la <strong>próxima instrucción</strong> a ejecutar.</li>
+                            <li><strong>Registro de Instrucción (IR):</strong> Almacena la instrucción que se está ejecutando actualmente.</li>
+                            <li><strong>Registro de Estado (FLAGS):</strong> Un conjunto de bits que indican el resultado de la última operación (Cero, Signo, Acarreo, Desbordamiento).</li>
+                        </ul>
+                    </div>
+                    <div id="tab-interfaz" class="tab-content hidden">
+                        <h4 class="text-lg font-semibold text-slate-200 mb-4">Registros de Interfaz con la Memoria</h4>
+                        <p class="text-slate-300 mb-4">Actúan como intermediarios en la comunicación con la memoria RAM.</p>
+                        <ul class="list-disc list-inside space-y-2 text-slate-300">
+                           <li><strong>Registro de Dirección de Memoria (MAR):</strong> Contiene la dirección de memoria a la que se va a acceder.</li>
+                           <li><strong>Registro de Datos de Memoria (MBR/MDR):</strong> Almacena el dato que se va a leer o escribir en la dirección indicada por el MAR.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="ciclo" class="mb-16 md:mb-24 scroll-mt-20">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-slate-200">El Ciclo de Instrucción</h3>
+                <p class="mt-2 text-md text-slate-400">El proceso fundamental que la CPU repite para ejecutar un programa. Pulsa "Iniciar" para ver la animación.</p>
+                 <button id="start-cycle-btn" class="mt-4 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition">Iniciar Animación</button>
+            </div>
+            <div class="grid md:grid-cols-4 gap-4 text-center">
+                <div id="step-fetch" class="cycle-step bg-slate-800 p-4 rounded-lg border-2 border-slate-700 transition-all duration-500">
+                    <div class="text-3xl mb-2">📥</div>
+                    <h5 class="font-semibold text-slate-200">1. Búsqueda (Fetch)</h5>
+                    <p class="text-sm text-slate-400">La CPU lee la instrucción desde la memoria RAM.</p>
+                </div>
+                <div id="step-decode" class="cycle-step bg-slate-800 p-4 rounded-lg border-2 border-slate-700 transition-all duration-500">
+                    <div class="text-3xl mb-2">📜</div>
+                    <h5 class="font-semibold text-slate-200">2. Decodificación (Decode)</h5>
+                    <p class="text-sm text-slate-400">La instrucción se interpreta para saber qué hacer.</p>
+                </div>
+                <div id="step-execute" class="cycle-step bg-slate-800 p-4 rounded-lg border-2 border-slate-700 transition-all duration-500">
+                    <div class="text-3xl mb-2">⚙️</div>
+                    <h5 class="font-semibold text-slate-200">3. Ejecución (Execute)</h5>
+                    <p class="text-sm text-slate-400">La ALU realiza la operación requerida.</p>
+                </div>
+                 <div id="step-store" class="cycle-step bg-slate-800 p-4 rounded-lg border-2 border-slate-700 transition-all duration-500">
+                    <div class="text-3xl mb-2">💾</div>
+                    <h5 class="font-semibold text-slate-200">4. Almacenamiento (Store)</h5>
+                    <p class="text-sm text-slate-400">El resultado se escribe en un registro o en memoria.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="rendimiento" class="scroll-mt-20">
+            <div class="text-center mb-12">
+                <h3 class="text-3xl font-bold text-slate-200">Optimizando el Rendimiento</h3>
+                <p class="mt-2 text-md text-slate-400">Filosofías de diseño y técnicas para hacer los procesadores más rápidos y eficientes.</p>
+            </div>
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 mb-8">
+                 <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h4 class="text-xl font-semibold mb-2 text-slate-200">CISC (Complex Instruction Set Computer)</h4>
+                        <p class="text-slate-300">Busca completar una tarea en la menor cantidad de líneas de código posible. Las instrucciones son complejas y pueden tardar múltiples ciclos de reloj en ejecutarse.</p>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-semibold mb-2 text-slate-200">RISC (Reduced Instruction Set Computer)</h4>
+                        <p class="text-slate-300">Favorece un conjunto de instrucciones más simple y pequeño, donde cada instrucción se ejecuta en un solo ciclo de reloj. La complejidad se traslada al software (compilador).</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                <h4 class="text-xl font-semibold mb-2 text-slate-200">Pipelining: Una Línea de Ensamblaje para Instrucciones</h4>
+                <p class="text-slate-300 mb-6">Esta técnica permite que el procesador trabaje en múltiples instrucciones a la vez, dividiendo su ejecución en etapas (como una línea de ensamblaje). Mientras una instrucción se está ejecutando, la siguiente se está decodificando y la siguiente se está buscando. El gráfico a continuación muestra cómo 5 instrucciones se completan mucho más rápido con esta técnica.</p>
+                <div class="chart-container">
+                    <canvas id="pipelineChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-950 text-white mt-16 md:mt-24">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-sm text-slate-400">
+            <p>Explorador Interactivo de Arquitectura de Computadoras. Creado a partir de material académico.</p>
+        </div>
+    </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // Component Interaction
+    const componentBtns = document.querySelectorAll('.component-btn');
+    const componentInfos = document.querySelectorAll('.component-info');
+    const defaultInfo = document.getElementById('info-default');
+    let activeBtn = null;
+
+    componentBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.dataset.target;
+            
+            if (activeBtn) {
+                activeBtn.classList.remove('component-active');
+            }
+            btn.classList.add('component-active');
+            activeBtn = btn;
+
+            componentInfos.forEach(info => {
+                info.classList.add('hidden');
+            });
+            
+            const targetInfo = document.getElementById(targetId);
+            if(targetInfo) {
+                targetInfo.classList.remove('hidden');
+            }
+        });
+    });
+
+    // Tab Interaction
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(t => t.classList.remove('tab-active'));
+            btn.classList.add('tab-active');
+
+            tabContents.forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            const tabId = btn.dataset.tab;
+            document.getElementById(tabId).classList.remove('hidden');
+        });
+    });
+    
+    // Instruction Cycle Animation
+    const startCycleBtn = document.getElementById('start-cycle-btn');
+    const cycleSteps = document.querySelectorAll('.cycle-step');
+
+    startCycleBtn.addEventListener('click', () => {
+        let delay = 0;
+        cycleSteps.forEach(step => step.classList.remove('step-highlight'));
+
+        const animateStep = (stepId, timeout) => {
+            setTimeout(() => {
+                cycleSteps.forEach(step => step.classList.remove('step-highlight'));
+                document.getElementById(stepId).classList.add('step-highlight');
+            }, timeout);
+        };
+
+        animateStep('step-fetch', delay);
+        delay += 1000;
+        animateStep('step-decode', delay);
+        delay += 1000;
+        animateStep('step-execute', delay);
+        delay += 1000;
+        animateStep('step-store', delay);
+        delay += 1500;
+        setTimeout(() => {
+            cycleSteps.forEach(step => step.classList.remove('step-highlight'));
+        }, delay);
+    });
+
+    // Pipelining Chart
+    const ctx = document.getElementById('pipelineChart').getContext('2d');
+    const pipelineChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Ciclo 1', 'Ciclo 2', 'Ciclo 3', 'Ciclo 4', 'Ciclo 5', 'Ciclo 6', 'Ciclo 7', 'Ciclo 8', 'Ciclo 9'],
+            datasets: [
+                {
+                    label: 'Sin Pipeline',
+                    data: [
+                        {x: [0, 4], y: 'Instrucción 1'},
+                        {x: [4, 8], y: 'Instrucción 2'},
+                    ],
+                    backgroundColor: 'rgba(251, 146, 60, 0.6)', // orange-400
+                    borderColor: 'rgba(251, 146, 60, 1)',
+                    borderWidth: 1,
+                    barPercentage: 0.5,
+                    borderSkipped: false,
+                },
+                 {
+                    label: 'Con Pipeline',
+                    data: [
+                        {x: [0, 1], y: 'I1 - Fetch'},
+                        {x: [1, 2], y: 'I1 - Decode'},
+                        {x: [1, 2], y: 'I2 - Fetch'},
+                        {x: [2, 3], y: 'I1 - Execute'},
+                        {x: [2, 3], y: 'I2 - Decode'},
+                        {x: [2, 3], y: 'I3 - Fetch'},
+                        {x: [3, 4], y: 'I1 - Store'},
+                        {x: [3, 4], y: 'I2 - Execute'},
+                        {x: [3, 4], y: 'I3 - Decode'},
+                        {x: [3, 4], y: 'I4 - Fetch'},
+                        {x: [4, 5], y: 'I2 - Store'},
+                        {x: [4, 5], y: 'I3 - Execute'},
+                        {x: [4, 5], y: 'I4 - Decode'},
+                        {x: [4, 5], y: 'I5 - Fetch'},
+                        {x: [5, 6], y: 'I3 - Store'},
+                        {x: [5, 6], y: 'I4 - Execute'},
+                        {x: [5, 6], y: 'I5 - Decode'},
+                         {x: [6, 7], y: 'I4 - Store'},
+                         {x: [6, 7], y: 'I5 - Execute'},
+                         {x: [7, 8], y: 'I5 - Store'},
+                    ],
+                    backgroundColor: 'rgba(96, 165, 250, 0.6)', // blue-400
+                    borderColor: 'rgba(96, 165, 250, 1)',
+                    borderWidth: 1,
+                    barPercentage: 0.8,
+                     borderSkipped: false,
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        color: '#e2e8f0' // slate-200
+                    }
+                },
+                title: {
+                    display: true,
+                    text: 'Comparación de Ejecución de Instrucciones',
+                    color: '#e2e8f0' // slate-200
+                },
+                tooltip: {
+                    enabled: false
+                }
+            },
+            scales: {
+                x: {
+                    min: 0,
+                    max: 9,
+                    title: {
+                        display: true,
+                        text: 'Ciclos de Reloj',
+                        color: '#cbd5e1' // slate-300
+                    },
+                    ticks: {
+                        color: '#94a3b8' // slate-400
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                y: {
+                    stacked: true,
+                     ticks: {
+                        color: '#94a3b8' // slate-400
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Smooth scroll for nav links and active state
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('section[id]');
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.getAttribute('id');
+                navLinks.forEach(link => {
+                    link.classList.remove('nav-active');
+                    if (link.getAttribute('href') === `#${id}`) {
+                        link.classList.add('nav-active');
+                    }
+                });
+            }
+        });
+    }, { rootMargin: '-50% 0px -50% 0px' });
+
+    sections.forEach(section => {
+        observer.observe(section);
+    });
+
+});
+</script>
+</body>
+</html>
+
